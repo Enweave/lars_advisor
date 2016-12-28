@@ -1,4 +1,4 @@
-﻿//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
 
 //|                                                 lars_advisor.mq4 |
 
@@ -26,6 +26,8 @@ input double   TradeStep=0.0005; // Делта пунктов
 
 input int      GridSteps=3; // Шагов сетки
 
+input bool     EnforcedMode = False; // Усиленный ряжим 
+
 extern bool ProfitTrailing=True; // Тралить только профит 
 
 extern int TrailingStop=15; // Фиксированный размер трала 
@@ -34,7 +36,7 @@ extern int TrailingStep =2; // Шаг трала
 
 extern bool UseSound =True; // Использовать звуковой сигнал 
 
-extern string NameFileSound="expert.wav"; // Наименование звукового файла
+extern string NameFileSound="taunt.wav"; // Наименование звукового файла
 
 
 
@@ -143,6 +145,8 @@ int OnInit()
    deleting_orders=True;
 
    Print("Lars_Advisor initialized!");
+
+   PlaySound(NameFileSound);
 
    return(INIT_SUCCEEDED);
 
@@ -290,29 +294,49 @@ double GetProfit()
 
 //+------------------------------------------------------------------+
 
-void MakeOrder(bool ask,double trade_value,double value)
+void MakeOrder(int order_type,double trade_value,double value)
 
   {
 
    int ticket;
 
-   if(ask)
+   switch (order_type) {
 
-     {
+     case (2): // buy limit { 
 
-      ticket=OrderSend(Symbol(),2,trade_value,(Ask-value),4,0,0,"My order",16384,0,clrNONE);
+      ticket=OrderSend(Symbol(),order_type,trade_value,(Ask-value),4,0,0,"My order",16384,0,clrNONE);
 
-      Print("make order, trade_value = ",trade_value," Ask = ",(Ask-value));
+      Print("make buy limit, trade_value = ",trade_value," Ask = ",(Ask-value));
 
+      break;
 
+     case (3) : // sell limit
 
-        } else {
+      ticket=OrderSend(Symbol(),order_type,trade_value,(Bid+value),4,0,0,"My order",16384,0,clrNONE);
 
-      ticket=OrderSend(Symbol(),3,trade_value,(Bid+value),4,0,0,"My order",16384,0,clrNONE);
+      Print("make sell limit, trade_value = ",trade_value," Bid = ",(Bid+value));
 
-      Print("make order, trade_value = ",trade_value," Bid = ",(Bid+value));
+      break;
 
-     }
+     case (4) : // buy stop
+
+      ticket=OrderSend(Symbol(),order_type,trade_value,(Ask+value),4,0,0,"My order",16384,0,clrNONE);
+
+      Print("make buy stop, trade_value = ",trade_value," Ask = ",(Ask+value));
+
+      break;
+
+     case (5) : // sell stop
+
+      ticket=OrderSend(Symbol(),order_type,trade_value,(Bid-value),4,0,0,"My order",16384,0,clrNONE);
+
+      Print("make sell stop, trade_value = ",trade_value," Bid = ",(Bid-value));
+
+      break;   
+
+   }
+
+     
 
    if(ticket==-1)
 
@@ -342,9 +366,17 @@ void MakeGrid()
 
      {
 
-      MakeOrder(True,trade_base,step_base);
+      MakeOrder(2,trade_base, step_base);
 
-      MakeOrder(False,trade_base,step_base);
+      MakeOrder(3,trade_base, step_base);
+
+      if (EnforcedMode == True) {
+
+        MakeOrder(4,trade_base, step_base);
+
+        MakeOrder(5,trade_base, step_base);
+
+      }
 
       step_base+=TradeStep;
 
